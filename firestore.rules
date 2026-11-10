@@ -1,0 +1,237 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function isWorkspaceMember(workspaceId) {
+      return isSignedIn() && (
+        workspaceId == ('ws_' + request.auth.uid) ||
+        (
+          exists(/databases/$(database)/documents/workspaces/$(workspaceId)) &&
+          (
+            request.auth.uid in get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.memberUids ||
+            get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.ownerId == request.auth.uid
+          )
+        )
+      );
+    }
+
+    function isWorkspaceOwner(workspaceId) {
+      return isSignedIn() && (
+        workspaceId == ('ws_' + request.auth.uid) ||
+        (
+          exists(/databases/$(database)/documents/workspaces/$(workspaceId)) &&
+          get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.ownerId == request.auth.uid
+        )
+      );
+    }
+
+    // Connection testing doc
+    match /test/{testId} {
+      allow read: if true;
+    }
+
+    // Invites Collection (Root level for redeemable single-use links)
+    match /invites/{inviteId} {
+      allow create: if isSignedIn() && isValidId(inviteId) && request.resource.data.inviterUid == request.auth.uid;
+      // Allow reading invite by exact valid token so invitee can view who invited them before signing in
+      allow get: if isValidId(inviteId);
+      allow list: if isSignedIn() && resource.data.inviterUid == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(inviteId) && (
+        (resource.data.inviterUid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) ||
+        (
+          (resource.data.inviteeEmail == request.auth.token.email || resource.data.inviteeEmail == request.auth.token.email.lower()) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'usedByUid', 'usedAt'])
+        )
+      );
+      allow delete: if isSignedIn() && isValidId(inviteId) && resource.data.inviterUid == request.auth.uid;
+    }
+
+    // Workspaces Collection
+    match /workspaces/{workspaceId} {
+      allow get: if isSignedIn() && (
+        resource == null ||
+        workspaceId == ('ws_' + request.auth.uid) ||
+        (resource != null && (
+          resource.data.ownerId == request.auth.uid ||
+          (resource.data.memberUids is list && request.auth.uid in resource.data.memberUids)
+        ))
+      );
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(workspaceId) && (
+        workspaceId == ('ws_' + request.auth.uid) ||
+        request.resource.data.ownerId == request.auth.uid
+      );
+      allow update: if isSignedIn() && (
+        workspaceId == ('ws_' + request.auth.uid) ||
+        isWorkspaceOwner(workspaceId) ||
+        (
+          resource != null &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberUids', 'updatedAt']) &&
+          request.resource.data.memberUids.hasAny([request.auth.uid])
+        )
+      );
+      allow delete: if isWorkspaceOwner(workspaceId);
+
+      // Members subcollection
+      match /members/{memberId} {
+        allow get, list: if isWorkspaceMember(workspaceId);
+        allow create: if isSignedIn() && (
+          request.auth.uid == memberId ||
+          workspaceId == ('ws_' + request.auth.uid) ||
+          isWorkspaceOwner(workspaceId)
+        );
+        allow update: if isWorkspaceOwner(workspaceId);
+        allow delete: if isSignedIn() && (
+          request.auth.uid == memberId ||
+          isWorkspaceOwner(workspaceId)
+        );
+      }
+
+      // Invites subcollection inside workspace
+      match /invites/{inviteId} {
+        allow get, list: if isWorkspaceMember(workspaceId);
+        allow create, update, delete: if isWorkspaceMember(workspaceId);
+      }
+
+      // Accounts
+      match /accounts/{accountId} {
+        allow get, delete: if isWorkspaceMember(workspaceId) && isValidId(accountId);
+        allow list: if isWorkspaceMember(workspaceId);
+        allow create, update: if isWorkspaceMember(workspaceId) && isValidId(accountId);
+      }
+
+      // Assets
+      match /assets/{assetId} {
+        allow get, delete: if isWorkspaceMember(workspaceId) && isValidId(assetId);
+        allow list: if isWorkspaceMember(workspaceId);
+        allow create, update: if isWorkspaceMember(workspaceId) && isValidId(assetId);
+      }
+
+      // Categories
+      match /categories/{categoryId} {
+        allow get, delete: if isWorkspaceMember(workspaceId) && isValidId(categoryId);
+        allow list: if isWorkspaceMember(workspaceId);
+        allow create, update: if isWorkspaceMember(workspaceId) && isValidId(categoryId);
+      }
+
+      // Transactions
+      match /transactions/{transactionId} {
+        allow get, delete: if isWorkspaceMember(workspaceId) && isValidId(transactionId);
+        allow list: if isWorkspaceMember(workspaceId);
+        allow create, update: if isWorkspaceMember(workspaceId) && isValidId(transactionId);
+      }
+
+      // Loans
+      match /loans/{loanId} {
+        allow get, delete: if isWorkspaceMember(workspaceId) && isValidId(loanId);
+        allow list: if isWorkspaceMember(workspaceId);
+        allow create, update: if isWorkspaceMember(workspaceId) && isValidId(loanId);
+      }
+
+      // Loan installments
+      match /loan_installments/{installmentId} {
+        allow get, delete: if isWorkspaceMember(workspaceId) && isValidId(installmentId);
+        allow list: if isWorkspaceMember(workspaceId);
+        allow create, update: if isWorkspaceMember(workspaceId) && isValidId(installmentId);
+      }
+
+      // Credit cards
+      match /credit_cards/{cardId} {
+        allow get, delete: if isWorkspaceMember(workspaceId) && isValidId(cardId);
+        allow list: if isWorkspaceMember(workspaceId);
+        allow create, update: if isWorkspaceMember(workspaceId) && isValidId(cardId);
+      }
+
+      // Card statements
+      match /card_statements/{statementId} {
+        allow get, delete: if isWorkspaceMember(workspaceId) && isValidId(statementId);
+        allow list: if isWorkspaceMember(workspaceId);
+        allow create, update: if isWorkspaceMember(workspaceId) && isValidId(statementId);
+      }
+
+      // Payments
+      match /payments/{paymentId} {
+        allow get, delete: if isWorkspaceMember(workspaceId) && isValidId(paymentId);
+        allow list: if isWorkspaceMember(workspaceId);
+        allow create, update: if isWorkspaceMember(workspaceId) && isValidId(paymentId);
+      }
+    }
+
+    // User Profile & Subcollections (backward compatibility & user preferences)
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /accounts/{accountId} {
+        allow get, delete: if isOwner(userId) && isValidId(accountId);
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(accountId);
+      }
+
+      match /assets/{assetId} {
+        allow get, delete: if isOwner(userId) && isValidId(assetId);
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(assetId);
+      }
+
+      match /categories/{categoryId} {
+        allow get, delete: if isOwner(userId) && isValidId(categoryId);
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(categoryId);
+      }
+
+      match /transactions/{transactionId} {
+        allow get, delete: if isOwner(userId) && isValidId(transactionId);
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(transactionId);
+      }
+
+      match /loans/{loanId} {
+        allow get, delete: if isOwner(userId) && isValidId(loanId);
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(loanId);
+      }
+
+      match /loan_installments/{installmentId} {
+        allow get, delete: if isOwner(userId) && isValidId(installmentId);
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(installmentId);
+      }
+
+      match /credit_cards/{cardId} {
+        allow get, delete: if isOwner(userId) && isValidId(cardId);
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(cardId);
+      }
+
+      match /card_statements/{statementId} {
+        allow get, delete: if isOwner(userId) && isValidId(statementId);
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(statementId);
+      }
+
+      match /payments/{paymentId} {
+        allow get, delete: if isOwner(userId) && isValidId(paymentId);
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(paymentId);
+      }
+    }
+  }
+}

@@ -1,0 +1,340 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and workspace settings",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "email": { "type": "string", "description": "User email" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "currency": { "type": "string", "description": "Default currency code, e.g. INR" },
+        "timezone": { "type": "string", "description": "Timezone e.g. Asia/Kolkata" },
+        "createdAt": { "type": "string", "description": "Creation timestamp ISO string" },
+        "updatedAt": { "type": "string", "description": "Last updated timestamp ISO string" }
+      },
+      "required": ["userId", "currency", "timezone"]
+    },
+    "Account": {
+      "title": "Account",
+      "description": "Bank account, digital wallet, or cash account",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Account unique ID" },
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "name": { "type": "string", "description": "Account name (e.g. HDFC Salary, ICICI Savings, Cash)" },
+        "type": { "type": "string", "enum": ["bank", "cash", "wallet"], "description": "Account type" },
+        "accountNumberLast4": { "type": "string", "description": "Optional last 4 digits" },
+        "openingBalancePaise": { "type": "integer", "description": "Opening balance in paise" },
+        "createdAt": { "type": "string", "description": "Creation timestamp ISO" },
+        "updatedAt": { "type": "string", "description": "Updated timestamp ISO" }
+      },
+      "required": ["id", "userId", "name", "type", "openingBalancePaise"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Income or expense category",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Category unique ID" },
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "name": { "type": "string", "description": "Category name" },
+        "type": { "type": "string", "enum": ["inflow", "outflow"], "description": "Category type" },
+        "color": { "type": "string", "description": "Color hex code" },
+        "icon": { "type": "string", "description": "Icon key" }
+      },
+      "required": ["id", "userId", "name", "type"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Inflow, Outflow, or Transfer record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Transaction unique ID" },
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "type": { "type": "string", "enum": ["inflow", "outflow", "transfer"], "description": "Transaction nature" },
+        "amountPaise": { "type": "integer", "description": "Amount in paise (integer)" },
+        "transactionDate": { "type": "string", "description": "Effective transaction date (YYYY-MM-DD)" },
+        "addedOn": { "type": "string", "description": "Server generated creation timestamp ISO string" },
+        "updatedAt": { "type": "string", "description": "Last updated timestamp ISO string" },
+        "category": { "type": "string", "description": "Category name" },
+        "categoryId": { "type": "string", "description": "Category ID if custom" },
+        "sourceOrMerchant": { "type": "string", "description": "Income source or merchant/payee name" },
+        "accountId": { "type": "string", "description": "Account ID received into or paid from" },
+        "creditCardId": { "type": "string", "description": "Credit card ID if paid via credit card" },
+        "notes": { "type": "string", "description": "Optional notes" },
+        "isDebtPayment": { "type": "boolean", "description": "True if this outflow is a debt/card/loan payment to exclude from category spending" },
+        "linkedPaymentId": { "type": "string", "description": "Linked payment reference ID if applicable" }
+      },
+      "required": ["id", "userId", "type", "amountPaise", "transactionDate", "addedOn"]
+    },
+    "Loan": {
+      "title": "Loan",
+      "description": "Loan and EMI details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Loan unique ID" },
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "lender": { "type": "string", "description": "Lender name (e.g. SBI, HDFC Bank, Bajaj)" },
+        "loanName": { "type": "string", "description": "Loan nickname/purpose" },
+        "originalPrincipalPaise": { "type": "integer", "description": "Original principal in paise" },
+        "currentOutstandingPaise": { "type": "integer", "description": "Current outstanding principal in paise" },
+        "balanceAsOfDate": { "type": "string", "description": "Balance date YYYY-MM-DD" },
+        "emiAmountPaise": { "type": "integer", "description": "Scheduled monthly EMI in paise" },
+        "nextDueDate": { "type": "string", "description": "Next payment due date YYYY-MM-DD" },
+        "remainingInstallments": { "type": "integer", "description": "Remaining count of EMIs" },
+        "notes": { "type": "string", "description": "Loan terms or reference" },
+        "createdAt": { "type": "string", "description": "Created at ISO" },
+        "updatedAt": { "type": "string", "description": "Updated at ISO" }
+      },
+      "required": ["id", "userId", "lender", "loanName", "originalPrincipalPaise", "currentOutstandingPaise", "emiAmountPaise", "nextDueDate", "remainingInstallments"]
+    },
+    "LoanInstallment": {
+      "title": "LoanInstallment",
+      "description": "Specific monthly installment for a loan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Installment unique ID" },
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "loanId": { "type": "string", "description": "Parent loan ID" },
+        "month": { "type": "string", "description": "Month identifier YYYY-MM" },
+        "dueDate": { "type": "string", "description": "Due date YYYY-MM-DD" },
+        "scheduledAmountPaise": { "type": "integer", "description": "Scheduled amount in paise" },
+        "paidAmountPaise": { "type": "integer", "description": "Total paid so far toward this installment" },
+        "status": { "type": "string", "enum": ["upcoming", "due_today", "partially_paid", "paid", "overdue"], "description": "Payment status" },
+        "createdAt": { "type": "string", "description": "Created at ISO" },
+        "updatedAt": { "type": "string", "description": "Updated at ISO" }
+      },
+      "required": ["id", "userId", "loanId", "month", "dueDate", "scheduledAmountPaise", "paidAmountPaise", "status"]
+    },
+    "CreditCard": {
+      "title": "CreditCard",
+      "description": "Credit card account and tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Credit card unique ID" },
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "nickname": { "type": "string", "description": "Card nickname (e.g. Amazon Pay ICICI)" },
+        "issuer": { "type": "string", "description": "Issuing bank (e.g. ICICI, HDFC, SBI)" },
+        "lastFourDigits": { "type": "string", "description": "Optional last 4 digits" },
+        "creditLimitPaise": { "type": "integer", "description": "Credit limit in paise" },
+        "openingBalancePaise": { "type": "integer", "description": "Opening outstanding balance in paise" },
+        "reconciliationAdjustmentPaise": { "type": "integer", "description": "Manual adjustment in paise for missing activity/credits" },
+        "createdAt": { "type": "string", "description": "Created at ISO" },
+        "updatedAt": { "type": "string", "description": "Updated at ISO" }
+      },
+      "required": ["id", "userId", "nickname", "issuer", "openingBalancePaise"]
+    },
+    "CardStatement": {
+      "title": "CardStatement",
+      "description": "Actual credit card monthly bill statement",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Statement unique ID" },
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "creditCardId": { "type": "string", "description": "Credit card ID" },
+        "statementMonth": { "type": "string", "description": "Billing month YYYY-MM" },
+        "statementDate": { "type": "string", "description": "Statement date YYYY-MM-DD" },
+        "dueDate": { "type": "string", "description": "Payment due date YYYY-MM-DD" },
+        "totalAmountDuePaise": { "type": "integer", "description": "Total amount due in paise" },
+        "minimumAmountDuePaise": { "type": "integer", "description": "Minimum amount due in paise" },
+        "paidAmountPaise": { "type": "integer", "description": "Amount paid toward this statement in paise" },
+        "status": { "type": "string", "enum": ["upcoming", "due_today", "partially_paid", "paid", "overdue"], "description": "Status of the statement payment" },
+        "createdAt": { "type": "string", "description": "Created at ISO" },
+        "updatedAt": { "type": "string", "description": "Updated at ISO" }
+      },
+      "required": ["id", "userId", "creditCardId", "statementMonth", "statementDate", "dueDate", "totalAmountDuePaise", "minimumAmountDuePaise", "paidAmountPaise", "status"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Recorded payment against loan EMI or credit card statement",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Payment unique ID" },
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "targetType": { "type": "string", "enum": ["loan", "credit_card"], "description": "Payment target" },
+        "targetId": { "type": "string", "description": "Loan ID or Credit Card ID" },
+        "installmentId": { "type": "string", "description": "Installment ID if loan" },
+        "statementId": { "type": "string", "description": "Statement ID if credit card" },
+        "amountPaise": { "type": "integer", "description": "Total payment amount in paise" },
+        "principalPaise": { "type": "integer", "description": "Principal component if split known" },
+        "interestPaise": { "type": "integer", "description": "Interest component if split known" },
+        "feesPaise": { "type": "integer", "description": "Fees component if split known" },
+        "isSplitKnown": { "type": "boolean", "description": "Whether breakdown into principal/interest/fees was provided" },
+        "paidFromAccountId": { "type": "string", "description": "Bank account used to pay" },
+        "paymentDate": { "type": "string", "description": "Payment date YYYY-MM-DD" },
+        "linkedOutflowId": { "type": "string", "description": "Linked Cash Outflow transaction ID" },
+        "notes": { "type": "string", "description": "Optional notes" },
+        "createdAt": { "type": "string", "description": "Created at ISO" }
+      },
+      "required": ["id", "userId", "targetType", "targetId", "amountPaise", "paymentDate", "paidFromAccountId"]
+    },
+    "Asset": {
+      "title": "Asset",
+      "description": "Manual asset such as Mutual Funds, EPF, Gold, or Real Estate",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Asset unique ID" },
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "workspaceId": { "type": "string", "description": "Workspace ID" },
+        "createdBy": { "type": "string", "description": "UID of user who created the record" },
+        "name": { "type": "string", "description": "Asset name" },
+        "category": { "type": "string", "description": "Asset category" },
+        "valuePaise": { "type": "integer", "description": "Current asset valuation in paise" },
+        "asOfDate": { "type": "string", "description": "Valuation date YYYY-MM-DD" },
+        "owner": { "type": "string", "enum": ["person1", "person2", "unassigned"], "description": "Owner assignment" },
+        "notes": { "type": "string", "description": "Optional asset notes" },
+        "createdAt": { "type": "string", "description": "Created at ISO" },
+        "updatedAt": { "type": "string", "description": "Updated at ISO" }
+      },
+      "required": ["id", "name", "valuePaise", "asOfDate", "owner"]
+    },
+    "Workspace": {
+      "title": "Workspace",
+      "description": "Shared money desk workspace for couples and families",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Workspace unique ID" },
+        "name": { "type": "string", "description": "Workspace name" },
+        "ownerId": { "type": "string", "description": "Owner user ID" },
+        "ownerEmail": { "type": "string", "description": "Owner email address" },
+        "memberUids": { "type": "array", "description": "Array of member user IDs" },
+        "person1Name": { "type": "string", "description": "Custom label for Person 1" },
+        "person2Name": { "type": "string", "description": "Custom label for Person 2" },
+        "createdAt": { "type": "string", "description": "Creation timestamp ISO" },
+        "updatedAt": { "type": "string", "description": "Updated timestamp ISO" }
+      },
+      "required": ["id", "name", "ownerId", "memberUids"]
+    },
+    "WorkspaceMember": {
+      "title": "WorkspaceMember",
+      "description": "Active member of a shared workspace",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Member user ID" },
+        "workspaceId": { "type": "string", "description": "Parent workspace ID" },
+        "email": { "type": "string", "description": "Member email" },
+        "displayName": { "type": "string", "description": "Member display name" },
+        "role": { "type": "string", "enum": ["owner", "member"], "description": "Membership role" },
+        "linkedProfile": { "type": "string", "enum": ["person1", "person2"], "description": "Linked profile for financial attribution" },
+        "joinedAt": { "type": "string", "description": "Joined timestamp ISO" }
+      },
+      "required": ["id", "workspaceId", "email", "role", "linkedProfile"]
+    },
+    "WorkspaceInvite": {
+      "title": "WorkspaceInvite",
+      "description": "Single-use secure workspace invite",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Invite unique ID token" },
+        "workspaceId": { "type": "string", "description": "Target workspace ID" },
+        "workspaceName": { "type": "string", "description": "Target workspace name" },
+        "inviterUid": { "type": "string", "description": "Inviter user ID" },
+        "inviterEmail": { "type": "string", "description": "Inviter email address" },
+        "inviterName": { "type": "string", "description": "Inviter display name" },
+        "inviteeEmail": { "type": "string", "description": "Invitee email in lowercase" },
+        "assignProfile": { "type": "string", "enum": ["person1", "person2"], "description": "Profile to map invitee to" },
+        "createdAt": { "type": "string", "description": "Invite creation ISO" },
+        "expiresAt": { "type": "string", "description": "Invite expiration ISO" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "expired", "revoked"], "description": "Status of the invite" },
+        "usedByUid": { "type": "string", "description": "User ID who accepted the invite" },
+        "usedAt": { "type": "string", "description": "Acceptance timestamp ISO" }
+      },
+      "required": ["id", "workspaceId", "inviterUid", "inviteeEmail", "expiresAt", "status"]
+    }
+  },
+  "firestore": {
+    "/workspaces/{workspaceId}": {
+      "schema": { "$ref": "#/entities/Workspace" },
+      "description": "Shared workspace metadata and member access list"
+    },
+    "/workspaces/{workspaceId}/members/{memberId}": {
+      "schema": { "$ref": "#/entities/WorkspaceMember" },
+      "description": "Workspace member profiles and linked personas"
+    },
+    "/workspaces/{workspaceId}/accounts/{accountId}": {
+      "schema": { "$ref": "#/entities/Account" },
+      "description": "Workspace bank and cash accounts"
+    },
+    "/workspaces/{workspaceId}/assets/{assetId}": {
+      "schema": { "$ref": "#/entities/Asset" },
+      "description": "Workspace manual investments and property assets"
+    },
+    "/workspaces/{workspaceId}/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "Workspace custom categories"
+    },
+    "/workspaces/{workspaceId}/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "Workspace inflows, outflows, and transfers"
+    },
+    "/workspaces/{workspaceId}/loans/{loanId}": {
+      "schema": { "$ref": "#/entities/Loan" },
+      "description": "Workspace loans and EMIs"
+    },
+    "/workspaces/{workspaceId}/loan_installments/{installmentId}": {
+      "schema": { "$ref": "#/entities/LoanInstallment" },
+      "description": "Workspace monthly loan installments"
+    },
+    "/workspaces/{workspaceId}/credit_cards/{cardId}": {
+      "schema": { "$ref": "#/entities/CreditCard" },
+      "description": "Workspace credit cards"
+    },
+    "/workspaces/{workspaceId}/card_statements/{statementId}": {
+      "schema": { "$ref": "#/entities/CardStatement" },
+      "description": "Workspace credit card statements"
+    },
+    "/workspaces/{workspaceId}/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/Payment" },
+      "description": "Workspace payments toward loans and credit cards"
+    },
+    "/workspaces/{workspaceId}/invites/{inviteId}": {
+      "schema": { "$ref": "#/entities/WorkspaceInvite" },
+      "description": "Workspace pending and historic invites"
+    },
+    "/invites/{inviteId}": {
+      "schema": { "$ref": "#/entities/WorkspaceInvite" },
+      "description": "Single-use invites for workspace access"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile and settings document"
+    },
+    "/users/{userId}/accounts/{accountId}": {
+      "schema": { "$ref": "#/entities/Account" },
+      "description": "User bank/cash accounts"
+    },
+    "/users/{userId}/assets/{assetId}": {
+      "schema": { "$ref": "#/entities/Asset" },
+      "description": "User manual assets e.g. Mutual Funds, Gold, EPF"
+    },
+    "/users/{userId}/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "User custom categories"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "Inflow, Outflow, and Transfers"
+    },
+    "/users/{userId}/loans/{loanId}": {
+      "schema": { "$ref": "#/entities/Loan" },
+      "description": "User loans"
+    },
+    "/users/{userId}/loan_installments/{installmentId}": {
+      "schema": { "$ref": "#/entities/LoanInstallment" },
+      "description": "Scheduled installments for loans"
+    },
+    "/users/{userId}/credit_cards/{cardId}": {
+      "schema": { "$ref": "#/entities/CreditCard" },
+      "description": "User credit cards"
+    },
+    "/users/{userId}/card_statements/{statementId}": {
+      "schema": { "$ref": "#/entities/CardStatement" },
+      "description": "Credit card monthly statements"
+    },
+    "/users/{userId}/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/Payment" },
+      "description": "Recorded loan and credit card bill payments"
+    }
+  }
+}
